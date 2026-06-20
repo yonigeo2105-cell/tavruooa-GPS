@@ -1,0 +1,12 @@
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+}
+
+#map {
+    height: 100vh; /* vh = Viewport Height, כלומר 100% מגובה המסך */
+    width: 100vw;  /* vw = Viewport Width, 100% מרוחב המסך */
+    z-index: 1;    /* מוודא שהמפה תמיד ברקע */
+}
