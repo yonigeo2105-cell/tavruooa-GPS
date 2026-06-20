@@ -6,74 +6,96 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 
 let userMarker = null;
-let isRecording = false;    // האם אנחנו באמצע הקלטה כרגע?
-let recordedRoute = [];     // רשימת קואורדינטות של המסלול שהוקלט
-let routePolyline = null;   // הקו האדום שיוצג על המפה
+let isRecording = false;
+let recordedRoute = [];
+let routePolyline = null;
 
-// חיבור ללחצנים מה-HTML
 const startBtn = document.getElementById('start-btn');
 const stopBtn = document.getElementById('stop-btn');
+const statusBar = document.getElementById('status-bar');
 
-// לחיצה על התחלת הקלטה
+// עדכון טקסט בשורת הסטטוס
+function updateStatus(text, isError = false) {
+    statusBar.innerText = text;
+    if (isError) {
+        statusBar.style.color = '#ff4d4d'; // אדום לשגיאה
+    } else {
+        statusBar.style.color = '#f1c40f'; // צהוב רגיל
+    }
+}
+
 startBtn.addEventListener('click', () => {
     isRecording = true;
-    recordedRoute = []; // איפוס מסלול קודם
+    recordedRoute = [];
     
-    // אם יש קו ישן על המפה, נמחק אותו
-    if (routePolyline) {
-        map.removeLayer(routePolyline);
-    }
-    
-    // יצירת קו אדום חדש וריק על המפה
-    routePolyline = L.polyline([], { color: 'red', weight: 5 }).addTo(map);
+    if (routePolyline) { map.removeLayer(routePolyline); }
+    routePolyline = L.polyline([], { color: 'red', weight: 6 }).addTo(map);
 
     startBtn.disabled = true;
     stopBtn.disabled = false;
-    alert("ההקלטה החלה! סע במסלול הרצוי.");
+    updateStatus("הקלטה פעילה! בתנועה יצוירו קווים.");
 });
 
-// לחיצה על עצירת הקלטה
 stopBtn.addEventListener('click', () => {
     isRecording = false;
     startBtn.disabled = false;
     stopBtn.disabled = true;
-    
-    alert(`ההקלטה הסתיימה! נשמרו ${recordedRoute.length} נקודות ציון במסלול.`);
-    console.log("המסלול שהוקלט:", recordedRoute); 
-    // בשלב הבא נלמד איך לשלוח את המערך הזה לבסיס נתונים בענן
+    updateStatus(`ההקלטה נעצרה. נשמרו ${recordedRoute.length} נקודות.`);
+    alert(`המסלול נשמר מקומית עם ${recordedRoute.length} נקודות.`);
 });
 
 function updateLocation(position) {
     const lat = position.coords.latitude;
     const lng = position.coords.longitude;
+    const accuracy = position.coords.accuracy; // דיוק ה-GPS במטרים
     const latlng = [lat, lng];
 
-    // עדכון המיקום הנוכחי של המשתמש
+    // עדכון הסיכה על המפה
     if (userMarker) {
         userMarker.setLatLng(latlng);
     } else {
         userMarker = L.marker(latlng).addTo(map);
+        userMarker.bindPopup("המשאית כאן").openPopup();
     }
 
-    // אם אנחנו במצב הקלטה, נוסיף את הנקודה למסלול ונצייר אותה
+    // אם מקליטים, דוחפים את הנקודה לקו
     if (isRecording) {
-        recordedRoute.push(latlng);          // מוסיף את הנקודה לרשימה
-        routePolyline.setLatLngs(recordedRoute); // מעדכן את הקו האדום על המפה
+        recordedRoute.push(latlng);
+        routePolyline.setLatLngs(recordedRoute);
+        updateStatus(`מקליט... קלטתי ${recordedRoute.length} נקודות (רמת דיוק: ${Math.round(accuracy)} מטר)`);
+    } else {
+        updateStatus(`GPS מחובר. רמת דיוק: ${Math.round(accuracy)} מטר.`);
     }
 
     map.setView(latlng, 17);
 }
 
 function locationError(error) {
-    console.warn('שגיאת מיקום:', error.message);
+    let errorMsg = "שגיאת GPS: ";
+    switch(error.code) {
+        case error.PERMISSION_DENIED:
+            errorMsg += "נא לאשר גישה למיקום בהגדרות הטלפון/דפדפן.";
+            break;
+        case error.POSITION_UNAVAILABLE:
+            errorMsg += "מיקום לא זמין (נסה לצאת למקום פתוח).";
+            break;
+        case error.TIMEOUT:
+            errorMsg += "הזמן לקבלת מיקום פג (אות חלש).";
+            break;
+        default:
+            errorMsg += error.message;
+    }
+    updateStatus(errorMsg, true);
 }
 
+// הפעלת המעקב
 if (navigator.geolocation) {
+    updateStatus("מנסה להתחבר ללווייני GPS...");
     navigator.geolocation.watchPosition(updateLocation, locationError, {
         enableHighAccuracy: true,
         maximumAge: 0,
-        timeout: 10000
+        timeout: 15000
     });
 } else {
-    alert("הדפדפן שלך לא תומך בשירותי מיקום.");
+    updateStatus("הדפדפן לא תומך ב-GPS", true);
 }
