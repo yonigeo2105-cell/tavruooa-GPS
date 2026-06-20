@@ -1,55 +1,79 @@
-body, html {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    width: 100%;
-    font-family: Arial, sans-serif;
+const map = L.map('map').setView([32.0853, 34.7818], 14);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap'
+}).addTo(map);
+
+let userMarker = null;
+let isRecording = false;    // האם אנחנו באמצע הקלטה כרגע?
+let recordedRoute = [];     // רשימת קואורדינטות של המסלול שהוקלט
+let routePolyline = null;   // הקו האדום שיוצג על המפה
+
+// חיבור ללחצנים מה-HTML
+const startBtn = document.getElementById('start-btn');
+const stopBtn = document.getElementById('stop-btn');
+
+// לחיצה על התחלת הקלטה
+startBtn.addEventListener('click', () => {
+    isRecording = true;
+    recordedRoute = []; // איפוס מסלול קודם
+    
+    // אם יש קו ישן על המפה, נמחק אותו
+    if (routePolyline) {
+        map.removeLayer(routePolyline);
+    }
+    
+    // יצירת קו אדום חדש וריק על המפה
+    routePolyline = L.polyline([], { color: 'red', weight: 5 }).addTo(map);
+
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+    alert("ההקלטה החלה! סע במסלול הרצוי.");
+});
+
+// לחיצה על עצירת הקלטה
+stopBtn.addEventListener('click', () => {
+    isRecording = false;
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+    
+    alert(`ההקלטה הסתיימה! נשמרו ${recordedRoute.length} נקודות ציון במסלול.`);
+    console.log("המסלול שהוקלט:", recordedRoute); 
+    // בשלב הבא נלמד איך לשלוח את המערך הזה לבסיס נתונים בענן
+});
+
+function updateLocation(position) {
+    const lat = position.coords.latitude;
+    const lng = position.coords.longitude;
+    const latlng = [lat, lng];
+
+    // עדכון המיקום הנוכחי של המשתמש
+    if (userMarker) {
+        userMarker.setLatLng(latlng);
+    } else {
+        userMarker = L.marker(latlng).addTo(map);
+    }
+
+    // אם אנחנו במצב הקלטה, נוסיף את הנקודה למסלול ונצייר אותה
+    if (isRecording) {
+        recordedRoute.push(latlng);          // מוסיף את הנקודה לרשימה
+        routePolyline.setLatLngs(recordedRoute); // מעדכן את הקו האדום על המפה
+    }
+
+    map.setView(latlng, 17);
 }
 
-#map {
-    height: 100vh;
-    width: 100vw;
-    z-index: 1;
+function locationError(error) {
+    console.warn('שגיאת מיקום:', error.message);
 }
 
-/* מיקום תיבת הלחצנים מעל המפה */
-#controls-container {
-    position: absolute;
-    top: 15px;
-    left: 5%;
-    right: 5%;
-    z-index: 1000; /* מספר גבוה כדי שיצוף מעל המפה */
-    display: flex;
-    gap: 10px;
-}
-
-/* עיצוב כללי ללחצנים - גדולים וקריאים לשטח */
-.btn {
-    flex: 1;
-    padding: 15px 10px;
-    font-size: 16px;
-    font-weight: bold;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-    text-align: center;
-}
-
-.start {
-    background-color: #2ecc71;
-    color: white;
-}
-
-.stop {
-    background-color: #e74c3c;
-    color: white;
-}
-
-/* עיצוב ללחצן כבוי */
-.btn:disabled {
-    background-color: #95a5a6;
-    color: #7f8c8d;
-    cursor: not-allowed;
-    box-shadow: none;
+if (navigator.geolocation) {
+    navigator.geolocation.watchPosition(updateLocation, locationError, {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 10000
+    });
+} else {
+    alert("הדפדפן שלך לא תומך בשירותי מיקום.");
 }
