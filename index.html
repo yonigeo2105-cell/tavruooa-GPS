@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>מערכת ניווט - הקלטת מסלול</title>
+    <title>מערכת ניווט - ניסוי שטח</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="style.css">
@@ -11,11 +11,13 @@
 <body>
 
     <div id="controls-container">
-        <button id="start-btn" class="btn start">התחל הקלטת מסלול</button>
-        <button id="stop-btn" class="btn stop" disabled>עצור ושמור מסלול</button>
+        <button id="start-btn" class="btn start">התחל הקלטה</button>
+        <button id="stop-btn" class="btn stop" disabled>עצור ושמור</button>
     </div>
 
     <div id="map"></div>
+
+    <div id="status-bar">מערכת עולה... מחפש אות GPS...</div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="script.js"></script>
