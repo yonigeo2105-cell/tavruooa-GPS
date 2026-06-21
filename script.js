@@ -1,8 +1,8 @@
-// ייבוא הכלים של Firebase (חיבור למערכת ולמשתמשים)
+// חיבור ל-Firebase
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
-// המפתחות הייחודיים של הפרויקט שלך שהוצאנו עכשיו
+// המפתחות שלך מהענן
 const firebaseConfig = {
     apiKey: "AIzaSyDjjkHCfciK5LRMbF87cJT4Q81-R6YfeRc",
     authDomain: "tavruooa-system.firebaseapp.com",
@@ -12,11 +12,14 @@ const firebaseConfig = {
     appId: "1:830671998830:web:4930fc09f332959089fb7f"
 };
 
-// הפעלת החיבור לענן
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-// ניהול מסכים
+// ==========================================
+// הגדרת מנהל המערכת 
+// ==========================================
+const MANAGER_EMAIL = "yonigeo2105@gmail.com"; 
+
 const screens = {
     login: document.getElementById('login-screen'),
     worker: document.getElementById('worker-screen'),
@@ -27,46 +30,47 @@ const screens = {
 function showScreen(screenKey) {
     Object.keys(screens).forEach(key => screens[key].classList.remove('active'));
     screens[screenKey].classList.add('active');
-    if (screenKey === 'map' && map) {
+    
+    if (screenKey === 'map' && typeof map !== 'undefined') {
         setTimeout(() => map.invalidateSize(), 200);
     }
 }
 
-// לוגיקת התחברות אמיתית מול Firebase
+// התחברות
 document.getElementById('login-btn').addEventListener('click', () => {
-    const email = document.getElementById('username').value.trim();
+    let username = document.getElementById('username').value.trim().toLowerCase();
     const password = document.getElementById('password').value;
     const errorText = document.getElementById('login-error');
     
-    if (!email || !password) {
-        errorText.innerText = "נא להזין אימייל וסיסמה";
+    if (!username || !password) {
+        errorText.innerText = "נא להזין שם משתמש וסיסמה";
         return;
+    }
+
+    if (!username.includes('@')) {
+        username = username + '@tavruooa.com'; 
     }
 
     errorText.innerText = "מתחבר למערכת...";
 
-    // פקודת ההתחברות לענן
-    signInWithEmailAndPassword(auth, email, password)
+    signInWithEmailAndPassword(auth, username, password)
         .then((userCredential) => {
-            // התחברות הצליחה!
             errorText.innerText = "";
             const user = userCredential.user;
             
-            // בדיקה זמנית: אם האימייל מכיל את המילה admin, נפתח את מסך המנהל
-            if (user.email.includes('admin')) {
+            if (user.email === MANAGER_EMAIL) {
                 showScreen('manager');
             } else {
-                showScreen('worker');
+                showScreen('worker');  
             }
         })
         .catch((error) => {
-            // התחברות נכשלה (סיסמה שגויה או מייל לא קיים)
             console.error("שגיאת התחברות:", error.code);
             errorText.innerText = "פרטי התחברות שגויים. נסה שוב.";
         });
 });
 
-// לוגיקת התנתקות אמיתית
+// התנתקות
 document.querySelectorAll('.logout-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         signOut(auth).then(() => {
@@ -77,11 +81,10 @@ document.querySelectorAll('.logout-btn').forEach(btn => {
     });
 });
 
-// לחצני מעבר למפה (זהים לקודם)
+// כפתורי ניווט חזרה לתפריט
 document.getElementById('map-back-btn').addEventListener('click', () => {
-    // בודק אם המשתמש המחובר הוא מנהל או פועל כדי לדעת לאן להחזיר אותו
     const currentUser = auth.currentUser;
-    if (currentUser && currentUser.email.includes('admin')) {
+    if (currentUser && currentUser.email === MANAGER_EMAIL) {
         showScreen('manager');
     } else {
         showScreen('worker');
@@ -103,10 +106,4 @@ document.getElementById('mgr-record-btn').addEventListener('click', () => {
     showScreen('map');
 });
 
-document.getElementById('worker-report-btn').addEventListener('click', () => {
-    alert("בשלב הבא נחבר את כפתור הדיווח למצלמה ולענן!");
-});
-
-// אתחול מפת Leaflet (עובדת כרגיל)
-const map = L.map('map').setView([32.0853, 34.7818], 14);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+document.getElementById('worker-report-btn').addEventListener('click', () =>
